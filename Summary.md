@@ -49,6 +49,61 @@ Properties - обычный класс основанный на старой р
 
 Класс загружается в память JVM, после Java 1.8 этап память называется MetaSpace.
 
+Статический блок отрабатывает ровно один раз при загрузке в MetaSpace.
+
+## app;ication.properties
+
+Ручное получение пропертей из файла
+
+```java
+public final class PropertiesUtil {
+    private static void loadProperties() {
+            try(InputStream inputStream =
+                        PropertiesUtil.class.getClassLoader().getResourceAsStream("application.properties")) {
+                PROPERTIES.load(inputStream);
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        }
+    ...
+}
+
+public final class ConnectionManager {
+
+    public static Connection open(){
+            try {
+                return DriverManager.getConnection(
+                        PropertiesUtil.get(USERNAME_KEY),
+                        PropertiesUtil.get(PASSWORD_KEY),
+                        PropertiesUtil.get(URL_KEY)
+                );
+            } catch (SQLException e) {
+                throw new RuntimeException(e);
+            }
+        }
+}
+
+```
+
+## Statement DDL операции
+
+В реальном проекте каждый раз не создаётся новое подключение, а переиспользуются существующие. Т.е. создаётся пул соединений. Создание соединения - дорогостоящая операция.
+
+Для выполнения универсального запроса у класса Statement используется метод execute(String): boolean. 
+Возвращает true - если select и данные вернулись. false - любой не select оператор или ddl.
+
+Statement в основном используется для ddl операций.
+
+Есть более информативные разновидности этого метода 
+- executeUpdate(): int для методов INSERT/UPDATE 
+- executeQuery(): ResultSet для SELECT
+
+executeLargeUpdate(): long - обновляет большое число строк (больше 4 байт или 1 млрд. записей)
+
+
+
+
+
 
 
 
