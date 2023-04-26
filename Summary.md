@@ -206,6 +206,43 @@ ResultSet можно не закрывать, так как он будет ав
 - Statement.RETURN_GENERATED_KEYS
 - Statement.NO_GENERATED_KEYS
 
+## SQL Injection
+
+Если значение в поле может быть null, то его лучше получать через ResultSet.getObject("id", Long.class)
+
+```java
+public class SqlInjectionEx {
+    public static void main(String[] args) throws SQLException {
+
+        String sqlParametr = "2 OR 1 = 1; DROP TABLE info;";
+        System.out.println(extracted(sqlParametr));
+    }
+
+    private static List<Long> extracted(String sqlParametr) throws SQLException {
+        String sqlInj = """
+                SELECT id FROM ticket
+                WHERE flight_id = %s
+                """.formatted(sqlParametr);
+
+        List<Long> result = new ArrayList<>();
+
+        try (Connection connection = ConnectionManager.open();
+                Statement statement = connection.createStatement()) {
+            ResultSet resultSet = statement.executeQuery(sqlInj);
+
+            while (resultSet.next()) {
+                result.add(resultSet.getObject("id", Long.class));
+            }
+        }
+        return result;
+    }
+}
+```
+Через подобные вставки в текст sql-запроса можно внедрять вредоносный код и повредить БД.
+
+Для того, чтобы обезопасить запросы нужно использовать PrepareStatement, который проверяет наличие sql Inоection и не допускает выполнение таких запросов.
+
+
 
 
 
