@@ -27,6 +27,13 @@ public class JdbcRunner {
             ;
             """;
 
+        String insertOneValueSql = """
+            INSERT INTO info (date)
+            VALUES 
+            ('AutoGenerate')
+            ;
+            """;
+
         String updateSql = """
                 UPDATE info
                 SET date = 'TestTest'
@@ -41,17 +48,12 @@ public class JdbcRunner {
 
         try (Connection connection = ConnectionManager.open();
              Statement statement = connection.createStatement()) {
-            System.out.println(connection.getSchema());
-            System.out.println(connection.getTransactionIsolation());
 
-            ResultSet executeResult = statement.executeQuery(selectSql);
-            while (executeResult.next()) {
-                System.out.println(executeResult.getLong("id") + " " +
-                        executeResult.getString("passenger_no"));
-
+            int executeResult = statement.executeUpdate(insertOneValueSql, Statement.RETURN_GENERATED_KEYS);
+            ResultSet generatedKeys = statement.getGeneratedKeys();
+            if (generatedKeys.next()) {
+                System.out.println(generatedKeys.getLong("id"));
             }
-//            System.out.println(executeResult);
-//            System.out.println(statement.getUpdateCount());
         }
 
     }
