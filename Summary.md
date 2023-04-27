@@ -242,7 +242,40 @@ public class SqlInjectionEx {
 
 Для того, чтобы обезопасить запросы нужно использовать PrepareStatement, который проверяет наличие sql Inоection и не допускает выполнение таких запросов.
 
+## PrepareStatement
 
+```java
+private static List<Long> selectIdBetween(LocalDateTime time1, LocalDateTime time2) throws SQLException {
+
+        List<Long> result = new ArrayList<>();
+
+        String sql = """
+                SELECT id FROM flight
+                WHERE departure_date BETWEEN ? AND ?;
+                """;
+
+        try (Connection connection = ConnectionManager.open();
+             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+
+            preparedStatement.setTimestamp(1, Timestamp.valueOf(time1));
+            preparedStatement.setTimestamp(2, Timestamp.valueOf(time2));
+
+            ResultSet resultSet = preparedStatement.executeQuery();
+
+            while (resultSet.next()) {
+                result.add(resultSet.getLong("id"));
+            }
+        }
+
+        return result;
+    }
+```
+
+PrepareStatement знает как переводить типы Java в типы БД (LocalDateTime -> TimeStamp и т.д.)
+
+PrepareStatement более быстрый т.к. прекомпилирует запросы, и более безопасный т.к. не позволяет выполнять SQL Injection.
+
+Чтобы измебжать лишнего boxing/unboxing лучше использовать resultSet.getObject().
 
 
 
