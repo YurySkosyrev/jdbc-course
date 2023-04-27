@@ -351,7 +351,54 @@ READ COMMITED - уровень изоляции по умолчанию в Postg
 
 В случае ConnectionPull необходимо возвращать Connection.setAutoCommit() в true.
 
+```java
+private static void deleteFromFlight(Long flightId) throws SQLException {
 
+        String deleteFromTicketSql = "DELETE FROM ticket WHERE flight_id = ?";
+        String deleteFromFlightSql = "DELETE FROM flight WHERE id = ?";
+
+        Connection connection = null;
+        PreparedStatement deleteTicketStatement = null;
+        PreparedStatement deleteFlightStatement = null;
+
+        try {
+            connection = ConnectionManager.open();
+            deleteTicketStatement = connection.prepareStatement(deleteFromTicketSql);
+            deleteFlightStatement = connection.prepareStatement(deleteFromFlightSql);
+
+            connection.setAutoCommit(false);
+
+            deleteTicketStatement.setLong(1, flightId);
+            deleteFlightStatement.setLong(1, flightId);
+
+            deleteTicketStatement.executeUpdate();
+
+            if (true) {
+                throw new RuntimeException("Ooops");
+            }
+
+            deleteFlightStatement.executeUpdate();
+
+            connection.commit();
+
+        } catch (Exception e) {
+           if (connection != null) {
+               connection.rollback();
+           }
+           throw e;
+        } finally {
+            if (connection != null) {
+                connection.close();
+            }
+            if (deleteFlightStatement != null) {
+                deleteFlightStatement.close();
+            }
+            if (deleteTicketStatement != null) {
+                deleteTicketStatement.close();
+            }
+        }
+    }
+```
 
 
 
