@@ -400,5 +400,84 @@ private static void deleteFromFlight(Long flightId) throws SQLException {
     }
 ```
 
+## Batch запросы
+
+При выполнении Statement.execute() происходит открытие транзакции и отправка запроса в БД по протоколу TCP/IP. Затем возвращается ответ. Транзакция закрывается.
+И так далее для всех запросов. 
+
+Открытие каждый раз транзакции ресурсоёмкая операция, если нужно выполнить несколько запросов их можно упаковать в batch-запрос и тем самым сэкономить ресурсы и время выполнения.
+
+Statement.executeBatch возвращает массив типа int - результатов выполнения запросов.
+
+С помощью batch имеет смысл делать операции типа DELETE/INSERT/UPDATE или DDL-операции.
+
+batch-запрос выполняется в рамках одной транзации, то есть если один запрос вызывает ошибку, то все не выполняются.
+
+## Blob и Clob
+
+Blob - binary large object (можно положить всё, что представимо в виде байт: картинки, видео, аудио, Word)
+
+Clob - character large object.
+
+Не во всех СУБД присутствуют эти типы данных. 
+
+В Postgres Blob - bytea, clob - TEXT.
+
+Для Oracle (в Posttgres нет) 
+- connection.createClob(); - только ASCII символы
+- connection.createNClob(); - любые символы
+
+Для передачи Blob и Clob в БД нужно открывать транзакцию. В Postgres это происходит автоматически.
+
+```java
+public class BlobEx {
+    public static void main(String[] args) throws SQLException, IOException {
+
+        getImage();
+//        saveImage();
+    }
+
+    private static void getImage() throws SQLException, IOException {
+        String sql = """
+                   SELECT image 
+                   FROM aircraft
+                   WHERE id = ?
+                   """;
+
+        try (Connection connection = ConnectionManager.open();
+             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+
+            preparedStatement.setInt(1, 1);
+            ResultSet resultSet = preparedStatement.executeQuery();
+            if (resultSet.next()) {
+                byte[] image = resultSet.getBytes("image");
+                Files.write(Path.of("C:\\Java\\jdbc-course\\jdbc-starter\\src\\main\\resources\\", "boeingFromDb.jpg"),
+                        image, StandardOpenOption.CREATE);
+            }
+        }
+    }
+
+    private static void saveImage() throws SQLException, IOException {
+
+        String sql = """
+                   UPDATE aircraft 
+                   SET image = ?
+                   WHERE id = 1
+                   """;
+
+        try (Connection connection = ConnectionManager.open();
+             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+
+
+            preparedStatement.setBytes(1, Files.readAllBytes(
+                    Path.of("C:\\Java\\jdbc-course\\jdbc-starter\\src\\main\\resources\\", "boeing.jpg")));
+            preparedStatement.executeUpdate();
+        }
+    }
+}
+```
+
+На практике не стоит загружать картинки в БД, так как это замедляет работу БД, нужно хранить ссылки на файлы в облачном хранилище.
+
 
 
