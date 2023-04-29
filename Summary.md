@@ -485,6 +485,104 @@ public class BlobEx {
 
 Connection pool - представляет собой коллекцию (список, очередь), которая сразу инициализирует несколько соединений.
 
+При моделировании Connection pool есть два способа реализовать возвращение соединения в коллекцию:
+
+1. Создать wrapper.
+```java
+class WrapperConnection implements Connection {
+
+    private final Connection connection;
+    private final BlockingQueue<Connection> pool;
+
+    //implement all Connection methods
+
+    @Override
+    public void close() {
+        pool.add(this);
+    }
+}
+```
+
+2. Proxy-объект
+
+Каждый класс знает о ClassLoader который загрузил его в JVM.
+```java
+public final class ConnectionPoolManager {
+    private static final String USERNAME_KEY = "db.username";
+    private static final String PASSWORD_KEY = "db.password";
+    private static final String URL_KEY = "db.url";
+    private static final String POOL_SIZE_KEY = "db.pool.size";
+    private static final Integer DEFAULT_POOL_SIZE = 10;
+    private static BlockingQueue<Connection> pool;
+    private static List<Connection> sourceConnection;
+
+    static {
+        loadDriver();
+        initConnectionPool();
+    }
+
+    private ConnectionPoolManager() {
+    }
+
+    private static void initConnectionPool() {
+
+        String poolSize = PropertiesUtil.get(POOL_SIZE_KEY);
+        int size = poolSize == null ? DEFAULT_POOL_SIZE : Integer.parseInt(poolSize);
+        pool = new ArrayBlockingQueue<>(size);
+        sourceConnection = new ArrayList<>();
+        for(int i = 0; i < size; i++) {
+            Connection connection = open();
+            Connection proxyConnection = (Connection)Proxy.newProxyInstance(ConnectionManager.class.getClassLoader(), new Class[]{Connection.class},
+                    (proxy, method, args) -> method.getName().equals("close")
+                            ? pool.add((Connection) proxy)
+                            : method.invoke(connection, args));
+            pool.add(proxyConnection);
+            sourceConnection.add(connection);
+        }
+
+    }
+
+    private static void loadDriver() {
+        try {
+            Class.forName("org.postgresql.Driver");
+        } catch (ClassNotFoundException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public static Connection get() {
+        try {
+            return pool.take();
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+
+    private static Connection open(){
+        try {
+            return DriverManager.getConnection(
+                    PropertiesUtil.get(URL_KEY),
+                    PropertiesUtil.get(USERNAME_KEY),
+                    PropertiesUtil.get(PASSWORD_KEY)
+            );
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public static void closePool() {
+        try {
+            for (Connection connection : sourceConnection) {
+                connection.close();
+            }
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
+    }
+}
+```
+
 
 
 

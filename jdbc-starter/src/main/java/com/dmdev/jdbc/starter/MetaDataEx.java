@@ -1,6 +1,7 @@
 package com.dmdev.jdbc.starter;
 
 import com.dmdev.jdbc.starter.util.ConnectionManager;
+import com.dmdev.jdbc.starter.util.ConnectionPoolManager;
 
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
@@ -9,11 +10,15 @@ import java.sql.SQLException;
 
 public class MetaDataEx {
     public static void main(String[] args) throws SQLException {
-        checkMetaData();
+        try {
+            checkMetaData();
+        } finally {
+            ConnectionPoolManager.closePool();
+        }
     }
 
     private static void checkMetaData() throws SQLException {
-        try (Connection connection = ConnectionManager.open()) {
+        try (Connection connection = ConnectionPoolManager.get()) {
             DatabaseMetaData metaData = connection.getMetaData();
             ResultSet catalogs = metaData.getCatalogs();
             while (catalogs.next()) {
