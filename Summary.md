@@ -583,6 +583,49 @@ public final class ConnectionPoolManager {
 }
 ```
 
+## DAO теория
+
+DAO - Data Access Object, паттерн проектирования. Объект доступа к данным. Обычный Java-объект, нужен для взаимодействия БД с сущностями.
+
+Создаётся необходимое колличество DAO объектов, по одному на каждую таблицу в БД. DAO-объекты хранятся в одной папке (dao) и являются синглтонами.
+
+Синглтон - воздается ровно один объект данного класса.
+
+Объект класса Entity по сути представляет собой строку в БД.
+
+Так как приходится часто работать с БД с помощью DAO и Entity были изобретены ORM-фреймворки
+- Hibernate
+- JOOQ
+- MyBatis
+
+ORM - Object Relative Mapping
+
+Под капотом используется JDBC, но API более удобный.
+
+![alt text](img/javaAppStructure.png "jdbc-structure")
+
+Dao объект не хранит никакое состояние, поэтому он потокобезопасен.
+
+```java
+public class TicketDao {
+
+    private static final TicketDao INSTANCE = new TicketDao();
+
+    private TicketDao() {
+
+    }
+
+    public static TicketDao getInstance() {
+        return INSTANCE;
+    }
+}
+
+```
+
+Класс не стоит делать final, потому что многие фреймворки создают Proxy на наши классы.
+
+
+
 
 
 
