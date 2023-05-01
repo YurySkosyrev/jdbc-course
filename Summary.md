@@ -624,6 +624,25 @@ public class TicketDao {
 
 Класс не стоит делать final, потому что многие фреймворки создают Proxy на наши классы.
 
+## CRUD
+
+CRUD - Create, Read, Update, Delete - основные операции с таблицами.
+
+В CRUD методах возможны исключения, мы должны создавать свои исключения в этих ситуациях.
+
+В Create-методах обычно возвращают либо id вставленного объекта, либо сам объект с установленным id.
+
+PrepareStatement.setLong предполагает, что long у нас есть, если таблица может иметь поле null, то нужно использовать PrepareStatement.setObject, чтобы избежать NPE.
+
+```java
+PreparedStatement preparedStatement = connection.prepareStatement(SAVE_SQL, Statement.RETURN_GENERATED_KEYS))
+```
+Метод Update очень похож на Save и многие фреймворки объединяют эти методы.
+
+Hibernate обязательно требует наличие конструктора без параметра.
+
+
+
 
 
 
