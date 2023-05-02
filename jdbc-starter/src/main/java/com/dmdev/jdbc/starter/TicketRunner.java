@@ -4,15 +4,29 @@ import com.dmdev.jdbc.starter.dao.TicketDao;
 import com.dmdev.jdbc.starter.entity.Ticket;
 
 import java.math.BigDecimal;
+import java.util.List;
+import java.util.Optional;
 
 public class TicketRunner {
 
     public static void main(String[] args) {
-
         TicketDao ticketDao = TicketDao.getInstance();
-        boolean deleteResult = ticketDao.delete(59L);
-        System.out.println(deleteResult);
+        List<Ticket> tickets = ticketDao.findAll();
+        System.out.println(tickets);
+    }
 
+    private static void updateTest() {
+        TicketDao ticketDao = TicketDao.getInstance();
+        Optional<Ticket> maybeTicket = ticketDao.findById(2L);
+        System.out.println(maybeTicket);
+
+        maybeTicket.ifPresent(ticket -> {
+                ticket.setCost(BigDecimal.valueOf(666));
+                ticketDao.update(ticket);
+        });
+
+        maybeTicket = ticketDao.findById(2L);
+        System.out.println(maybeTicket);
     }
 
     private static void saveTest() {

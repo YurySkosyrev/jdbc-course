@@ -641,6 +641,14 @@ PreparedStatement preparedStatement = connection.prepareStatement(SAVE_SQL, Stat
 
 Hibernate обязательно требует наличие конструктора без параметра.
 
+В методах, где возможно возвращение null нужно возвращать Optional. В случае коллекции возвращаем пустую коллекцию.
+
+**Shift + F6** - переименование.
+
+
+
+
+
 
 
 
