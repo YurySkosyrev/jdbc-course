@@ -660,8 +660,38 @@ public record TicketFilter(int limit,
 record, появился в Java 14, автоматически генерирует конструктор для полей, указанных в скобках, геттеры, toString(), Equals(), HashCode()
 сеттеры недопустимы, так как это immutable-объект.
 
+```java
+ List<Object> parametrs = new ArrayList<>();
+        List<String> whereSql = new ArrayList<>();
+        if (filter.seatNo() != null) {
+            whereSql.add("seat_no LIKE ?");
+            parametrs.add("%" + filter.seatNo() + "%");
+        }
+        if (filter.passengerName() != null) {
+            whereSql.add("passenger_name = ?");
+            parametrs.add(filter.passengerName());
+        }
+        parametrs.add(filter.limit());
+        parametrs.add(filter.offset());
 
+        String where = whereSql.stream()
+                .collect(joining(" AND ", " WHERE ", " LIMIT ? OFFSET ? "));
 
+        String sql = FIND_ALL_SQL + where;
+```
+
+вместо if можно подключить библиотеку Querydsl. Она может работать с Hibernate или только с схемой БД, которая генерует классы с помощью которых можно динамически строить where-условия.
+
+Предположим у нас есть таблица с 100000 записями и нам нужно последовательно выбирать 20 записей.
+
+select * from test limit 20 offset 100
+select * from test limit 20 offset 1000
+select * from test limit 20 offset 10000
+
+Каждый раз время очередного запроса будет увеличиваться. Т.к. нужно будет прочитать первые n элементов в условии offset.
+
+Для ускорения работы с batch-запросами нужно запоминать последний возвращенный id, и вместо OFFSET использовать условие WHERE id > n, чтобы пропустить первые n строк.
+select * from test where id > 10000 limit 20;
 
 
 

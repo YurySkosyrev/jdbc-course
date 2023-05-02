@@ -9,6 +9,9 @@ import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
+
+import static java.util.stream.Collectors.*;
 
 public class TicketDao {
 
@@ -67,13 +70,22 @@ public class TicketDao {
     public List<Ticket> findALl(TicketFilter filter) {
 
         List<Object> parametrs = new ArrayList<>();
+        List<String> whereSql = new ArrayList<>();
+        if (filter.seatNo() != null) {
+            whereSql.add("seat_no LIKE ?");
+            parametrs.add("%" + filter.seatNo() + "%");
+        }
+        if (filter.passengerName() != null) {
+            whereSql.add("passenger_name = ?");
+            parametrs.add(filter.passengerName());
+        }
         parametrs.add(filter.limit());
         parametrs.add(filter.offset());
 
-        String sql = FIND_ALL_SQL + """
-               LIMIT ?
-               OFFSET ?
-                """;
+        String where = whereSql.stream()
+                .collect(joining(" AND ", " WHERE ", " LIMIT ? OFFSET ? "));
+
+        String sql = FIND_ALL_SQL + where;
 
         try (Connection connection = ConnectionPoolManager.get();
              PreparedStatement preparedStatement = connection.prepareStatement(sql)
@@ -81,9 +93,15 @@ public class TicketDao {
             for (int i = 0; i < parametrs.size(); i++) {
                 preparedStatement.setObject(i + 1, parametrs.get(i));
             }
+            System.out.println(preparedStatement);
 
             ResultSet resultSet = preparedStatement.executeQuery();
-            List<Integer>
+            List<Ticket> tickets = new ArrayList<>();
+
+            while (resultSet.next()) {
+                tickets.add(buildTicket(resultSet));
+            }
+            return tickets;
 
         } catch (SQLException e) {
             throw new DaoException(e);
