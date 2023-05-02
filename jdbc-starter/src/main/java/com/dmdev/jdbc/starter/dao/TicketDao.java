@@ -1,5 +1,6 @@
 package com.dmdev.jdbc.starter.dao;
 
+import com.dmdev.jdbc.starter.dto.TicketFilter;
 import com.dmdev.jdbc.starter.entity.Ticket;
 import com.dmdev.jdbc.starter.exception.DaoException;
 import com.dmdev.jdbc.starter.util.ConnectionPoolManager;
@@ -63,7 +64,32 @@ public class TicketDao {
         }
     }
 
-    
+    public List<Ticket> findALl(TicketFilter filter) {
+
+        List<Object> parametrs = new ArrayList<>();
+        parametrs.add(filter.limit());
+        parametrs.add(filter.offset());
+
+        String sql = FIND_ALL_SQL + """
+               LIMIT ?
+               OFFSET ?
+                """;
+
+        try (Connection connection = ConnectionPoolManager.get();
+             PreparedStatement preparedStatement = connection.prepareStatement(sql)
+        ) {
+            for (int i = 0; i < parametrs.size(); i++) {
+                preparedStatement.setObject(i + 1, parametrs.get(i));
+            }
+
+            ResultSet resultSet = preparedStatement.executeQuery();
+            List<Integer>
+
+        } catch (SQLException e) {
+            throw new DaoException(e);
+        }
+    }
+
     public List<Ticket> findAll() {
         
         List<Ticket> tickets = new ArrayList<>();
