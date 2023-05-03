@@ -693,6 +693,94 @@ select * from test limit 20 offset 10000
 Для ускорения работы с batch-запросами нужно запоминать последний возвращенный id, и вместо OFFSET использовать условие WHERE id > n, чтобы пропустить первые n строк.
 select * from test where id > 10000 limit 20;
 
+## Сложный entity mapping
+
+Возможны два варианта:
+1. Сделать одним запросом с помощью JOIN и из результирующей таблицы сбилдить сущность, которая входит в другую.
+- плюс - один запрос к БД
+- минус - в Dao одной сущности нужно знать, как создаётся другая<br>
+в случае, если в таблице есть другие внешние ключи, то мехнизм разрастается ещё больше.
+
+2. Сделать отдельный Dao и с его помощью сбилдить объект, который передаётся в конструктор другого объекта.
+- плюс - более понятная структура
+- минус - дополнительные запросы к БД, более медленная работа.
+
+Hibernate предоставляет оба этих варианта: Lazy - предоставить зависимые сущности по запросу, либо предоставить всё.
+
+
+Так же при запросе с помощью отдельного Dao из ConnectionPool берется очередное соединение, которого может и не быть, тогда нам придётся ждать пока другой запрос вернет Connection. Либо, что ещё хуже может возникнуть DeadLock если кто-то одновременно вызывает FindById и ожидает пока появятся соединения в Pool.
+
+В реальных приложениях Connection открывают на уровне сервиса и передают его на уровень Dao, с помощью AOP, или ThreadLocal переменных или FindByID(Long id, Connection connection)
+
+```java
+ @Override
+    public Optional<Flight> findById(Long id) {
+        try (Connection connection = ConnectionPoolManager.get()) {
+            return findById(id, connection);
+        } catch (SQLException e) {
+            throw new DaoException(e);
+        }
+    }
+
+    public Optional<Flight> findById(Long id, Connection connection) {
+        try (PreparedStatement preparedStatement = connection.prepareStatement(FIND_BY_ID_SQL)) {
+
+            preparedStatement.setLong(1, id);
+
+            ResultSet resultSet = preparedStatement.executeQuery();
+
+            Flight flight = null;
+
+            if(resultSet.next()) {
+                flight = new Flight(
+                        resultSet.getLong("id"),
+                        resultSet.getString("flight_no"),
+                        resultSet.getTimestamp("departure_date").toLocalDateTime(),
+                        resultSet.getString("departure_airport_code"),
+                        resultSet.getTimestamp("arrival_date").toLocalDateTime(),
+                        resultSet.getString("arrival_airport_code"),
+                        resultSet.getInt("aircraft_id"),
+                        resultSet.getString("status")
+                );
+            }
+
+            return Optional.ofNullable(flight);
+        } catch (SQLException e) {
+            throw new DaoException(e);
+        }
+    }
+```
+
+Каждый ResultSet знает о PrepareStatement, который его открыл, а каждый PrepareStatement знает о Connection, который его создал. Поэтому ResultSet не обязательно закрывать.
+
+```java
+  ticket.setFlight(flightDao.findById(resultSet.getLong("flight_id"),resultSet.getStatement().getConnection()).orElse(null));
+```
+
+Обычно для разных DAO создаётся один интерфейс CRUD-операций, который реализуется в каждом DAO.
+
+```java
+public interface Dao<K, E> {
+
+    boolean delete(K id);
+
+    E save(E ticket);
+
+    void update(E ticket);
+
+    Optional<E> findById(K id);
+
+    List<E> findAll();
+}
+```
+
+В сущностях часто делают коллекции для реализации отношения 1 ко многим. При этом в ResultSet набор расплитывается, т.е. нужно из нескольких строк для одного и того же id создать коллекцию.
+
+Hybernate предоставляет автоматический mapping, часто используется Lazy вариант, когда мы по требованию достаём коллекцию и устанавливаем её в нашу сущность.
+
+
+
+
 
 
 

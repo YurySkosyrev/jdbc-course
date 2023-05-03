@@ -11,6 +11,11 @@ import java.util.Optional;
 public class TicketRunner {
 
     public static void main(String[] args) {
+       Optional<Ticket> ticket = TicketDao.getInstance().findById(5L);
+        System.out.println(ticket);
+    }
+
+    private static void filterTest() {
         TicketFilter ticketFilter = new TicketFilter(3, 2, null, "A1");
         List<Ticket> tickets = TicketDao.getInstance().findALl(ticketFilter);
         System.out.println(tickets);
@@ -36,7 +41,7 @@ public class TicketRunner {
 
         ticket.setPassengerNo("1234567");
         ticket.setPassengerName("Test");
-        ticket.setFlightId(3L);
+//        ticket.setFlight(3L);
         ticket.setSeatNo("B3");
         ticket.setCost(BigDecimal.TEN);
 
